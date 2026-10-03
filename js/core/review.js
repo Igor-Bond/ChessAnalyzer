@@ -174,7 +174,9 @@ export function оценкаКонца(fen) {
         return { мат: 0, проигралБелые: доска.turn() === 'w' };
     }
 
-    if (доска.isDraw() || доска.isStalemate()) return { cp: 0 };
+    // Не isDraw: в него входит правило 50 ходов, а после сотого полухода
+    // партия может идти дальше, и оценивать её должен движок, а не ноль
+    if (доска.isStalemate() || доска.isInsufficientMaterial()) return { cp: 0 };
     return null;
 }
 

@@ -23,6 +23,9 @@ await import('./suites/install.test.js');
 await import('./suites/engine.test.js');
 await import('./suites/screens.test.js');
 
+// Последней: ставит настоящий сервис-воркер, и тот берёт страницу под себя
+await import('./suites/sw.test.js');
+
 const summary = await run(document.getElementById('results'));
 
 // Итог — в globalThis: снаружи проверки запускает CI, ему нужно значение

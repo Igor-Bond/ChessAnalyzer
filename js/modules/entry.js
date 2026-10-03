@@ -13,7 +13,7 @@ import { actions } from '../core/actions.js';
 import { ui } from '../core/ui.js';
 import { иконка } from '../core/icons.js';
 import { хранилище } from '../core/store.js';
-import { доскаНа, разобратьТекст, вPGN, результатПоПозиции } from '../core/game.js';
+import { доскаНа, разобратьТекст, вPGN, результатПоПозиции, партияОкончена } from '../core/game.js';
 import { найтиХод, показатьХод, НОТАЦИИ } from '../core/notation.js';
 import { нарисоватьДоску, полеШаха } from '../core/board.js';
 
@@ -117,7 +117,7 @@ export const вводЭкран = {
 
         const очередь = доска.turn() === 'w' ? 'белых' : 'чёрных';
         const номер = Math.floor(п.ходы.length / 2) + 1;
-        const конец = доска.isGameOver();
+        const конец = партияОкончена(доска);
 
         const н = НОТАЦИИ[нотация];
         const пример = `e4, ${н.n}f3, ${н.b}xe5, 0-0`;

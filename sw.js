@@ -14,7 +14,7 @@
  * установленных приложений останется старый кэш.
  */
 
-const APP_VERSION = 'v3';
+const APP_VERSION = 'v4';
 const CACHE_NAME = `chess-${APP_VERSION}`;
 
 const СРОК_СЕТИ = 3000;
@@ -77,20 +77,52 @@ const ФАЙЛЫ = [
     'vendor/stockfish/stockfish-19-lite-single.wasm'
 ];
 
+/**
+ * Свежая копия файла — мимо HTTP-кэша браузера.
+ *
+ * GitHub Pages отдаёт файлы с max-age=600, и обычный запрос десять минут
+ * после выкладки получает прежнюю копию. Положенная в наш кэш, она
+ * осталась бы там до следующей версии — для движка и фигур, которые
+ * берутся сначала из кэша, это значит навсегда.
+ */
+function свежий(адрес) {
+    return new Request(адрес, { cache: 'reload' });
+}
+
+/**
+ * Докачать в кэш всё, чего в нём нет.
+ *
+ * Кэш у адреса igor-bond.github.io один на все приложения владельца, и
+ * сосед может его стереть: трекер тренировок, обновляясь, удаляет все кэши,
+ * кроме своего. Приложение поэтому при каждом запуске просит воркер
+ * проверить кэш (сообщение «проверить-кэш» из main.js), и недостающее
+ * докачивается, пока есть сеть. Без этого шахматы после обновления трекера
+ * не открылись бы офлайн — а узнаётся это в турнирном зале без связи.
+ *
+ * Каждый файл отдельно: cache.addAll валит всё из-за одного адреса.
+ */
+async function докачать() {
+    const кэш = await caches.open(CACHE_NAME);
+
+    await Promise.all(ФАЙЛЫ.map(async (адрес) => {
+        if (await кэш.match(адрес)) return;
+
+        try {
+            await кэш.add(свежий(адрес));
+        } catch (e) {
+            console.warn('[SW] Не удалось положить в кэш', адрес, e);
+        }
+    }));
+}
+
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            // Каждый файл отдельно: cache.addAll валит установку целиком из-за одного адреса
-            .then((кэш) => Promise.all(ФАЙЛЫ.map((адрес) => кэш.add(адрес).catch(
-                (e) => console.warn('[SW] Не удалось положить в кэш', адрес, e)
-            ))))
-            .then(() => self.skipWaiting())
-    );
+    event.waitUntil(докачать().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys()
+            // Только свои прежние версии: чужие кэши на общем адресе не трогаем
             .then((имена) => Promise.all(имена
                 .filter((имя) => имя.startsWith('chess-') && имя !== CACHE_NAME)
                 .map((имя) => caches.delete(имя))))
@@ -98,12 +130,28 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-/** Сеть со сроком: не дождались — берём из кэша. */
+self.addEventListener('message', (event) => {
+    if (event.data === 'проверить-кэш') event.waitUntil(докачать());
+});
+
+/**
+ * Сеть со сроком: не дождались — берём из кэша.
+ *
+ * Код запрашивается в обход HTTP-кэша с проверкой свежести (no-cache):
+ * иначе десять минут после выкладки половина модулей приходила бы новой, а
+ * половина — прежней, и приложение собиралось бы из двух версий. Переходы
+ * по страницам идут как есть: запрос перехода нельзя пересоздать с иными
+ * параметрами.
+ */
 function изСети(запрос) {
+    const сеть = запрос.mode === 'navigate'
+        ? fetch(запрос)
+        : fetch(запрос.url, { cache: 'no-cache', credentials: 'same-origin' });
+
     return new Promise((готово, мимо) => {
         const часы = setTimeout(() => мимо(new Error('Сеть не ответила')), СРОК_СЕТИ);
 
-        fetch(запрос).then((ответ) => {
+        сеть.then((ответ) => {
             clearTimeout(часы);
             готово(ответ);
         }).catch((e) => {
@@ -111,6 +159,12 @@ function изСети(запрос) {
             мимо(e);
         });
     });
+}
+
+function положить(запрос, ответ) {
+    if (!ответ.ok) return;
+    const копия = ответ.clone();
+    caches.open(CACHE_NAME).then((кэш) => кэш.put(запрос, копия));
 }
 
 self.addEventListener('fetch', (event) => {
@@ -125,11 +179,8 @@ self.addEventListener('fetch', (event) => {
 
     if (тяжёлое) {
         event.respondWith(
-            caches.match(запрос, { ignoreSearch: true }).then((найдено) => найдено || fetch(запрос).then((ответ) => {
-                if (ответ.ok) {
-                    const копия = ответ.clone();
-                    caches.open(CACHE_NAME).then((кэш) => кэш.put(запрос, копия));
-                }
+            caches.match(запрос, { ignoreSearch: true }).then((найдено) => найдено || fetch(свежий(запрос.url)).then((ответ) => {
+                положить(запрос, ответ);
                 return ответ;
             }))
         );
@@ -139,15 +190,17 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         изСети(запрос)
             .then((ответ) => {
-                if (ответ.ok) {
-                    const копия = ответ.clone();
-                    caches.open(CACHE_NAME).then((кэш) => кэш.put(запрос, копия));
-                }
+                положить(запрос, ответ);
                 return ответ;
             })
-            .catch(() => caches.match(запрос)
-                .then((найдено) => найдено
-                    || (запрос.mode === 'navigate' ? caches.match('index.html') : undefined)
-                    || new Response('Нет сети', { status: 503, statusText: 'Нет сети' })))
+            .catch(async () => {
+                // Переход по адресу без своего файла (#/разбор/…) ведёт в тот же
+                // index.html. Ждём совпадение, а не берём обещание за ответ:
+                // обещание всегда «истинно», и до запасного 503 дело не доходило
+                const найдено = await caches.match(запрос)
+                    || (запрос.mode === 'navigate' ? await caches.match('index.html') : undefined);
+
+                return найдено || new Response('Нет сети', { status: 503, statusText: 'Нет сети' });
+            })
     );
 });
