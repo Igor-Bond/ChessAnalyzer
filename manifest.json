@@ -5,6 +5,10 @@
   "description": "Разбор партий движком Stockfish: точность, ошибки, лучшие ходы",
   "start_url": "./index.html",
   "scope": "./",
+  "related_applications": [
+    { "platform": "webapp", "url": "https://igor-bond.github.io/ChessAnalyzer/manifest.json" }
+  ],
+  "prefer_related_applications": false,
   "display": "standalone",
   "orientation": "any",
   "background_color": "#16181d",

@@ -13,6 +13,7 @@ import { новаяПартия } from '../core/game.js';
 import { собратьРазбор } from '../core/report.js';
 import { иконка } from '../core/icons.js';
 import { синхронизация } from '../core/autosync.js';
+import { установка } from '../core/install.js';
 import { когдаСловами } from './settings.js';
 import { VERSION } from '../version.js';
 
@@ -57,6 +58,20 @@ function карточка(партия) {
  * видно и здесь, иначе партия, не доехавшая до компьютера, выглядела бы
  * загадкой, а не «нет связи».
  */
+/**
+ * Установка — кнопкой, когда Chrome готов; иначе ссылкой на объяснение.
+ *
+ * Ссылка нужна потому, что пункт меню Chrome пропадает молча (Р-24), и
+ * человеку некуда посмотреть, почему. В установленном приложении — ничего.
+ */
+function строкаУстановки() {
+    if (установка.вПриложении) return '';
+
+    return установка.можно
+        ? html`<button class="btn big install-btn" data-action="установить">Установить на телефон</button>`
+        : html`<button class="sync-line" data-action="настройки"><span>Как установить на телефон</span></button>`;
+}
+
 function строкаОбмена() {
     if (!синхронизация.включена) return '';
 
@@ -99,6 +114,7 @@ export const архивЭкран = {
                 </div>
                 <p class="hint">Снимите бланк или введите ходы — движок разберёт каждый ход.</p>
                 ${строкаОбмена()}
+                ${строкаУстановки()}
             </section>
 
             <section class="games">

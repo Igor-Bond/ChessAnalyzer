@@ -14,6 +14,7 @@ import { распознавание } from '../../js/core/recognize.js';
 import { разобратьОтвет } from '../../js/core/scoresheet.js';
 import { новаяПартия } from '../../js/core/game.js';
 import { синхронизация } from '../../js/core/autosync.js';
+import { установка } from '../../js/core/install.js';
 
 const экран = () => document.getElementById('screen');
 
@@ -347,6 +348,33 @@ describe('Экраны', () => {
             синхронизация.задатьОблако(null);
             app.go('архив');
         }
+    });
+
+    it('установка: кнопка в архиве, когда Chrome готов; объяснение в настройках', async () => {
+        установка.init();
+        установка.сбросить();
+
+        app.go('архив');
+        assert(!экран().querySelector('.install-btn'), 'кнопка установки без готовности Chrome');
+        assert(экран().querySelector('[data-action="настройки"]'), 'нет ссылки «Как установить»');
+
+        const e = new Event('beforeinstallprompt', { cancelable: true });
+        let показано = false;
+        e.prompt = () => { показано = true; };
+        e.userChoice = Promise.resolve({ outcome: 'dismissed' });
+        window.dispatchEvent(e);
+        app.render();
+
+        assert(экран().querySelector('.install-btn'), 'кнопка не появилась');
+        equal(немыеКнопки(), []);
+        await нажать('.install-btn');
+        await new Promise((r) => setTimeout(r, 10));
+        assert(показано, 'окно установки не показано');
+
+        app.go('настройки');
+        await дождаться(() => /Установка на телефон/.test(экран().textContent), 'раздел установки');
+        equal(немыеКнопки(), []);
+        app.go('архив');
     });
 
     it('фото без ключа: подсказка про настройки, чтение недоступно', async () => {

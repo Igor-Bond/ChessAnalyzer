@@ -9,6 +9,7 @@
  */
 
 import { describe, it, equal, assert } from '../runner.js';
+import { установка } from '../../js/core/install.js';
 
 const КОРЕНЬ = new URL('../', location.href);
 
@@ -79,5 +80,47 @@ describe('Установка на телефон', () => {
 
         const main = await (await fetch(new URL('js/main.js', КОРЕНЬ), { cache: 'no-store' })).text();
         assert(/serviceWorker\s*\.register\('sw\.js'\)/.test(main), 'приложение не регистрирует сервис-воркер');
+    });
+});
+
+
+/** Событие установки, как его шлёт Chrome: с prompt() и обещанием выбора. */
+function событиеУстановки(ответ = 'accepted') {
+    const e = new Event('beforeinstallprompt', { cancelable: true });
+    e.показано = false;
+    e.prompt = () => { e.показано = true; };
+    e.userChoice = Promise.resolve({ outcome: ответ });
+    return e;
+}
+
+describe('Своя кнопка установки', () => {
+    it('манифест позволяет спросить Chrome, установлено ли приложение', async () => {
+        const м = await манифест();
+        const связь = (м.related_applications || []).find((п) => п.platform === 'webapp');
+        assert(связь && /\/manifest\.json$/.test(связь.url), 'нет related_applications с собственным манифестом');
+        assert(м.prefer_related_applications !== true, 'prefer_related_applications=true запретил бы установку');
+    });
+
+    it('событие Chrome ловится, кнопка ставит, повторно не ставит', async () => {
+        установка.init();
+        установка.сбросить();
+
+        const e = событиеУстановки();
+        window.dispatchEvent(e);
+        assert(e.defaultPrevented, 'системный баннер не придержан');
+        assert(установка.можно, 'кнопка не стала доступной');
+
+        equal(await установка.установить(), true);
+        assert(e.показано, 'окно установки не показано');
+        assert(!установка.можно, 'одноразовое событие использовано дважды');
+    });
+
+    it('диагноз: Chrome считает установленным — так и сказано', async () => {
+        установка.сбросить();
+        const д = await установка.диагноз({ связанные: async () => [{ platform: 'webapp', url: 'x' }] });
+        equal(д.состояние, 'считает-установленным');
+
+        const д2 = await установка.диагноз({ связанные: async () => [] });
+        equal(д2.состояние, установка.поддерживается ? 'ждём' : 'вручную');
     });
 });
