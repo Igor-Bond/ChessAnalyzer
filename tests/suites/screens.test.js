@@ -350,13 +350,12 @@ describe('Экраны', () => {
         }
     });
 
-    it('установка: кнопка в архиве, когда Chrome готов; объяснение в настройках', async () => {
+    it('установка: кнопка в архиве появляется, только когда Chrome готов', async () => {
         установка.init();
         установка.сбросить();
 
         app.go('архив');
         assert(!экран().querySelector('.install-btn'), 'кнопка установки без готовности Chrome');
-        assert(экран().querySelector('[data-action="настройки"]'), 'нет ссылки «Как установить»');
 
         const e = new Event('beforeinstallprompt', { cancelable: true });
         let показано = false;
@@ -370,11 +369,7 @@ describe('Экраны', () => {
         await нажать('.install-btn');
         await new Promise((r) => setTimeout(r, 10));
         assert(показано, 'окно установки не показано');
-
-        app.go('настройки');
-        await дождаться(() => /Установка на телефон/.test(экран().textContent), 'раздел установки');
-        equal(немыеКнопки(), []);
-        app.go('архив');
+        assert(!экран().querySelector('.install-btn'), 'кнопка осталась после установки');
     });
 
     it('фото без ключа: подсказка про настройки, чтение недоступно', async () => {

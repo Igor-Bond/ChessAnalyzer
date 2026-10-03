@@ -761,10 +761,4 @@ a { color: var(--accent); }
 
 /* ================== УСТАНОВКА ================== */
 
-.steps { margin: 6px 0 4px; padding-left: 20px; }
-.steps li { margin: 4px 0; }
-.diag { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
-
-.install-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.install-card p { flex: 1; margin: 0; min-width: 180px; }
 .install-btn { margin-top: 10px; }

@@ -14,7 +14,7 @@
  * установленных приложений останется старый кэш.
  */
 
-const APP_VERSION = 'v9';
+const APP_VERSION = 'v10';
 const CACHE_NAME = `chess-${APP_VERSION}`;
 
 const СРОК_СЕТИ = 3000;
