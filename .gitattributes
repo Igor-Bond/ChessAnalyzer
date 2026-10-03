@@ -1,0 +1,19 @@
+# Единый вид переносов строк в репозитории.
+#
+# Windows пишет CRLF, Linux и macOS — LF. Без этого файла git при каждом
+# коммите предупреждает «LF will be replaced by CRLF», а при работе с двух
+# машин показывает весь файл изменённым из-за невидимых символов.
+
+* text=auto eol=lf
+
+# Двоичные файлы трогать нельзя
+*.png   binary
+*.jpg   binary
+*.ico   binary
+
+# Скрипты PowerShell остаются с CRLF: Windows PowerShell 5.1 читает .ps1
+# как файл системной кодировки, если в нём нет BOM, и кириллица в них
+# превращается в мусор. Сохранять их только в UTF-8 с BOM.
+*.ps1 text eol=crlf
+*.wasm  binary
+*.svg   text eol=lf

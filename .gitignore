@@ -1,0 +1,12 @@
+# Локальные настройки инструментов, у каждого свои
+.claude/settings.local.json
+
+# Мусор операционных систем
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Редакторы
+.vscode/
+.idea/
+*.swp

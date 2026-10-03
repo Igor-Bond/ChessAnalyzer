@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Проверки</title>
+<style>
+    body {
+        background: #14110f;
+        color: #f3ede4;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        margin: 0;
+        padding: 24px 16px 60px;
+        line-height: 1.5;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .lead { color: #a89a8a; font-size: 12px; margin-bottom: 20px; }
+    .total {
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+    .total.ok   { background: #1e2d1e; color: #6fae6f; border: 1px solid #6fae6f; }
+    .total.fail { background: #2d1a18; color: #e07b6b; border: 1px solid #c0392b; }
+    .suite { margin-bottom: 22px; }
+    .suite h2 {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #3f7fd8;
+        margin: 0 0 8px;
+    }
+    .test {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        font-size: 13px;
+        padding: 4px 0;
+        border-bottom: 1px solid #241f1b;
+        flex-wrap: wrap;
+    }
+    .test .mark { flex: none; width: 14px; }
+    .test.ok .mark { color: #6fae6f; }
+    .test.fail { color: #e07b6b; }
+    .test.fail .mark { color: #c0392b; }
+    .error {
+        width: 100%;
+        color: #a89a8a;
+        font-size: 12px;
+        padding: 6px 0 6px 24px;
+    }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Проверки</h1>
+    <p class="lead">
+        Отдельный ключ хранения <code>chess.test</code>: архив партий не трогается.
+    </p>
+    <div id="results">Выполняются…</div>
+</div>
+
+<!--
+    Узел, который приложение считает всегда существующим.
+
+    Проверки нажимают настоящие кнопки — иначе до состояния, спрятанного
+    внутри модуля, не добраться, — а обработчики в ответ вызывают
+    app.render(). Без этого узла каждое такое нажатие роняло бы обработчик
+    на пустом месте и засоряло вывод.
+-->
+<div hidden>
+    <main id="screen"></main>
+</div>
+
+<!--
+    Ключ хранения подменяется обычным скриптом, а не модульным: модули
+    выполняются после разбора всей страницы, и store.js успел бы прочитать
+    настоящий архив раньше, чем сюда дошла бы очередь.
+
+    Проверки идут мимо сервис-воркера: иначе они проверяют не то, что лежит
+    в репозитории, а то, что осталось в кэше у этого браузера. Снять воркер
+    после загрузки уже поздно — модули к тому времени запрошены. Поэтому
+    сначала снимаем, и если он этой загрузкой ещё управлял, перезагружаемся
+    один раз. Отсюда же динамический импорт вместо статического тега.
+-->
+<script>
+    globalThis.__CHESS_KEY__ = 'chess.test';
+
+    (async () => {
+        const управлял = !!navigator.serviceWorker?.controller;
+
+        try {
+            for (const reg of await navigator.serviceWorker?.getRegistrations?.() || []) {
+                await reg.unregister();
+            }
+
+            for (const name of await caches?.keys?.() || []) await caches.delete(name);
+        } catch {
+            // Ни воркера, ни хранилища кэшей может не быть вовсе — тогда и
+            // снимать нечего, а проверкам это безразлично
+        }
+
+        if (управлял) return location.reload();
+
+        await import('./run.js');
+    })();
+</script>
+</body>
+</html>
