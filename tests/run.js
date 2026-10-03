@@ -24,7 +24,8 @@ await import('./suites/install.test.js');
 await import('./suites/engine.test.js');
 await import('./suites/screens.test.js');
 
-// Последней: ставит настоящий сервис-воркер, и тот берёт страницу под себя
+// Ставит настоящий сервис-воркер — в своей пустой области, страницу
+// проверок он под себя не берёт (см. набор)
 await import('./suites/sw.test.js');
 
 const summary = await run(document.getElementById('results'));
