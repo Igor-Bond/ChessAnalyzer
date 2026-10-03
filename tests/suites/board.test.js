@@ -57,7 +57,7 @@ describe('Доска', () => {
         const svg = разметка(нарисоватьДоску({ fen: НАЧАЛО }));
         const фигуры = svg.querySelectorAll('.piece');
         equal(фигуры.length, 32);
-        equal(svg.querySelector('[data-at="g8"]').getAttribute('href'), 'assets/pieces/bN.svg');
+        assert(svg.querySelector('[data-at="g8"]').getAttribute('href').endsWith('/assets/pieces/bN.svg'), 'не та картинка коня');
     });
 
     it('клетки нажимаются только когда доска нажимаемая', () => {

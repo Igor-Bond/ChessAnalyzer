@@ -15,7 +15,7 @@ import { иконка } from '../core/icons.js';
 import { хранилище } from '../core/store.js';
 import { доскаНа, разобратьТекст, вPGN, результатПоПозиции, партияОкончена } from '../core/game.js';
 import { найтиХод, показатьХод, НОТАЦИИ } from '../core/notation.js';
-import { нарисоватьДоску, полеШаха } from '../core/board.js';
+import { нарисоватьДоску, полеШаха, ФИГУРЫ } from '../core/board.js';
 
 const { html, raw } = ui;
 
@@ -83,7 +83,7 @@ function выборПревращения(цвет) {
             <span>Превратить в:</span>
             ${фигуры.map((ф) => html`
                 <button class="promo-btn" data-action="превратить" data-piece="${ф}">
-                    <img src="assets/pieces/${цвет}${ф.toUpperCase()}.svg" alt="${ф}">
+                    <img src="${ФИГУРЫ}${цвет}${ф.toUpperCase()}.svg" alt="${ф}">
                 </button>
             `)}
             <button class="btn ghost small" data-action="отменить-превращение">Отмена</button>

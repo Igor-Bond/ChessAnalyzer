@@ -21,6 +21,7 @@ import { уменьшить, вырезать } from '../core/photo.js';
 import { распознавание } from '../core/recognize.js';
 import { сверить, сомнительные } from '../core/scoresheet.js';
 import { ai } from '../core/ai.js';
+import { склонение } from './home.js';
 
 const { html, raw } = ui;
 
@@ -137,7 +138,7 @@ function итогСверки() {
     return html`
         <section class="card">
             <div class="recog-sum">
-                <div><b>${ходов}</b><span>ходов прочитано</span></div>
+                <div><b>${ходов}</b><span>${склонение(ходов, 'ход прочитан', 'хода прочитано', 'ходов прочитано')}</span></div>
                 <div class="st-исправлено"><b>${счёт('исправлено')}</b><span>поправили правила</span></div>
                 <div class="st-сомнение"><b>${вопросов}</b><span>${вопросов ? 'на проверку' : 'вопросов нет'}</span></div>
             </div>

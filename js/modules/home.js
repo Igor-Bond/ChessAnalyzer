@@ -16,6 +16,7 @@ import { синхронизация } from '../core/autosync.js';
 import { установка } from '../core/install.js';
 import { когдаСловами } from './settings.js';
 import { VERSION } from '../version.js';
+import { ФИГУРЫ } from '../core/board.js';
 
 const { html } = ui;
 
@@ -100,7 +101,7 @@ export const архивЭкран = {
 
         return html`
             <header class="topbar">
-                <h1 class="brand"><img class="brand-mark" src="assets/pieces/wN.svg" alt=""> Разбор партий</h1>
+                <h1 class="brand"><img class="brand-mark" src="${ФИГУРЫ}wN.svg" alt=""> Разбор партий</h1>
                 <button class="icon-btn" data-action="настройки" aria-label="Настройки" title="Настройки">${ui.raw(иконка('настройки'))}</button>
             </header>
 
