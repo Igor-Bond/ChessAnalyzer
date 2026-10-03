@@ -19,6 +19,7 @@ await import('./suites/scoresheet.test.js');
 await import('./suites/review.test.js');
 await import('./suites/board.test.js');
 await import('./suites/store.test.js');
+await import('./suites/sync.test.js');
 await import('./suites/install.test.js');
 await import('./suites/engine.test.js');
 await import('./suites/screens.test.js');

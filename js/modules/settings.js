@@ -14,6 +14,7 @@ import { хранилище, ГЛУБИНЫ } from '../core/store.js';
 import { НОТАЦИИ, показатьХод } from '../core/notation.js';
 import { ai, МОДЕЛЬ_ПО_УМОЛЧАНИЮ } from '../core/ai.js';
 import { ключИзТрекера } from '../core/trackerkey.js';
+import { синхронизация } from '../core/autosync.js';
 
 const { html, raw } = ui;
 
@@ -70,6 +71,52 @@ function разделGemini(н) {
     `;
 }
 
+/** Время последнего обмена словами: «в 14:05» сегодня, иначе с датой. */
+export function когдаСловами(мс) {
+    if (!мс) return 'ещё не было';
+    const д = new Date(мс);
+    const часы = д.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return д.toDateString() === new Date().toDateString()
+        ? `сегодня в ${часы}`
+        : `${д.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} в ${часы}`;
+}
+
+function разделОбмена() {
+    const с_ = синхронизация.состояние;
+
+    if (!синхронизация.включена) {
+        return html`
+            <section class="card">
+                <h2 class="card-title">Обмен между устройствами</h2>
+                <p>Партии станут одинаковыми на телефоне и компьютере: снятый в турнире бланк можно разбирать дома. Заодно архив перестаёт жить в одном браузере.</p>
+                <p class="muted small">Вход через Google — тот же, что в трекере тренировок. Если вы вошли в трекер в этом браузере, входить заново не придётся. Разбор не пересылается: на другом устройстве он пересчитается сам.</p>
+                <button class="btn primary" data-action="обмен-включить" ${с_.идёт ? 'disabled' : ''}>${raw(иконка('облако'))} Включить обмен</button>
+                ${с_.ошибка ? html`<p class="form-error">${с_.ошибка}</p>` : ''}
+            </section>
+        `;
+    }
+
+    const о = хранилище.обмен();
+    const ждут = о.грязные.filter((id) => (хранилище.партия(id)?.ходы.length ?? 1) > 0).length;
+
+    return html`
+        <section class="card">
+            <h2 class="card-title">Обмен между устройствами</h2>
+            <p class="key-line">${raw(иконка('облако'))} ${с_.кто ? html`Вход: <b>${с_.кто.email || с_.кто.имя}</b>` : 'Обмен включён'}</p>
+            <p class="small">
+                ${с_.идёт ? 'Идёт обмен…' : html`Последний обмен: ${когдаСловами(о.когда)}${с_.последний ? html` · получено ${с_.последний.получено}, отправлено ${с_.последний.отправлено}` : ''}`}
+                ${ждут && !с_.идёт ? html`<br><span class="muted">Ждут отправки: ${ждут}</span>` : ''}
+            </p>
+            ${с_.ошибка ? html`<p class="form-error">${с_.ошибка}</p>` : ''}
+            <div class="row-actions">
+                <button class="btn" data-action="обмен-сейчас" ${с_.идёт ? 'disabled' : ''}>Обменяться сейчас</button>
+                <button class="btn ghost" data-action="обмен-выключить">Выключить на этом устройстве</button>
+            </div>
+            <p class="muted small">Выключение не стирает партии и не выходит из Google — трекер тренировок продолжит работать как работал.</p>
+        </section>
+    `;
+}
+
 export const настройкиЭкран = {
 
     render() {
@@ -82,6 +129,7 @@ export const настройкиЭкран = {
             </header>
 
             <div class="narrow">
+                ${разделОбмена()}
                 ${разделGemini(н)}
 
                 <section class="card">
@@ -190,4 +238,19 @@ actions.on('проверить-ключ', async () => {
 
 actions.onChange('модель', (el) => {
     хранилище.настроить({ модель: el.value });
+});
+
+actions.on('обмен-включить', async () => {
+    await синхронизация.включить();
+    if (app.route.name === 'настройки') app.render();
+});
+
+actions.on('обмен-сейчас', async () => {
+    await синхронизация.сейчас();
+    if (app.route.name === 'настройки') app.render();
+});
+
+actions.on('обмен-выключить', () => {
+    синхронизация.выключить();
+    app.render();
 });

@@ -12,7 +12,8 @@
 
 ## Состояние
 
-Версия 0.2: фото бланка через Gemini со сверкой по правилам шахмат, архив
+Версия 0.3: обмен партиями между устройствами (вход Google, как в трекере),
+фото бланка через Gemini со сверкой по правилам шахмат, архив
 партий, ввод ходов (текстом, по доске, вставкой PGN),
 разбор с классами ходов, точностью по lichess, стадиями партии, графиком,
 переломными моментами и просмотром вариантов.
@@ -42,6 +43,7 @@ powershell -ExecutionPolicy Bypass -File tools/serve.ps1
 |---|---|---|
 | `vendor/stockfish/` | Stockfish.js 19, облегчённая однопоточная сборка (npm `stockfish`) | GPL-3 |
 | `vendor/chess.js/` | chess.js 1.4.0 (npm `chess.js`) | BSD-2 |
+| `vendor/firebase/` | Firebase JS SDK (копия из трекера тренировок) | Apache-2.0 |
 | `assets/pieces/` | Фигуры cburnett, Colin M.L. Burnett (через lichess) | GPLv2+ |
 
 Из-за Stockfish весь проект распространяется под GPL-3 — см. [LICENSE](LICENSE).

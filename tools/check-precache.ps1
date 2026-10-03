@@ -45,7 +45,10 @@ foreach ($dir in $roots) {
     $path = Join-Path $Root $dir
     if (-not (Test-Path $path)) { continue }
 
-    Get-ChildItem $path -Recurse -File | Where-Object { $_.Extension -in '.js', '.css', '.png', '.svg', '.wasm' } | ForEach-Object {
+    # vendor/firebase в предварительный кэш не входит: почти мегабайт нужен только
+    # при включённом обмене, а он без сети невозможен. Кэшируется при первом
+    # использовании правилом «сначала кэш» для vendor/ в sw.js.
+    Get-ChildItem $path -Recurse -File | Where-Object { $_.Extension -in '.js', '.css', '.png', '.svg', '.wasm' } | Where-Object { $_.FullName -notmatch '[\\/]vendor[\\/]firebase[\\/]' } | ForEach-Object {
         $rel = $_.FullName.Substring($Root.Length + 1) -replace '\\', '/'
         $actual += $rel
     }

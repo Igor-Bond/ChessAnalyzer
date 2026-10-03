@@ -12,6 +12,8 @@ import { хранилище } from '../core/store.js';
 import { новаяПартия } from '../core/game.js';
 import { собратьРазбор } from '../core/report.js';
 import { иконка } from '../core/icons.js';
+import { синхронизация } from '../core/autosync.js';
+import { когдаСловами } from './settings.js';
 import { VERSION } from '../version.js';
 
 const { html } = ui;
@@ -48,6 +50,28 @@ function карточка(партия) {
     `;
 }
 
+/**
+ * Строка обмена под кнопками — только когда обмен включён.
+ *
+ * Ведёт в настройки: там подробности и кнопка «Обменяться сейчас». Ошибку
+ * видно и здесь, иначе партия, не доехавшая до компьютера, выглядела бы
+ * загадкой, а не «нет связи».
+ */
+function строкаОбмена() {
+    if (!синхронизация.включена) return '';
+
+    const с_ = синхронизация.состояние;
+    const текст = с_.идёт ? 'Обмен…'
+        : с_.ошибка ? `Обмен не удался: ${с_.ошибка}`
+            : `Синхронизировано ${когдаСловами(хранилище.обмен().когда)}`;
+
+    return html`
+        <button class="sync-line ${с_.ошибка ? 'bad' : ''}" data-action="настройки">
+            ${ui.raw(иконка('облако'))}<span>${текст}</span>
+        </button>
+    `;
+}
+
 export function склонение(n, один, два, пять) {
     const н = Math.abs(n) % 100;
     const н1 = н % 10;
@@ -74,6 +98,7 @@ export const архивЭкран = {
                     <button class="btn big" data-action="новая">+ Ввести ходы</button>
                 </div>
                 <p class="hint">Снимите бланк или введите ходы — движок разберёт каждый ход.</p>
+                ${строкаОбмена()}
             </section>
 
             <section class="games">

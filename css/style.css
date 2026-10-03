@@ -738,3 +738,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .key-input { font-size: 15px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .fields select { width: 100%; }
 a { color: var(--accent); }
+
+/* ================== ОБМЕН ================== */
+
+.sync-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 2px;
+    text-align: left;
+}
+
+.sync-line .ico { width: 18px; height: 18px; color: var(--accent); flex: none; }
+.sync-line.bad { color: var(--danger); }
+.sync-line.bad .ico { color: var(--danger); }
