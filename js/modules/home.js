@@ -69,8 +69,11 @@ export const архивЭкран = {
             </header>
 
             <section class="hero">
-                <button class="btn primary big" data-action="новая">+ Новая партия</button>
-                <p class="hint">Введите ходы с бланка или вставьте текст партии — движок разберёт каждый ход.</p>
+                <div class="hero-actions">
+                    <button class="btn primary big" data-action="новая-по-фото">${ui.raw(иконка('камера'))} Сфотографировать бланк</button>
+                    <button class="btn big" data-action="новая">+ Ввести ходы</button>
+                </div>
+                <p class="hint">Снимите бланк или введите ходы — движок разберёт каждый ход.</p>
             </section>
 
             <section class="games">
@@ -87,6 +90,11 @@ export const архивЭкран = {
 actions.on('новая', () => {
     const партия = хранилище.сохранить(новаяПартия());
     app.go('ввод', партия.id);
+});
+
+actions.on('новая-по-фото', () => {
+    const партия = хранилище.сохранить(новаяПартия());
+    app.go('фото', партия.id);
 });
 
 actions.on('открыть', (el) => {

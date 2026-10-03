@@ -640,3 +640,101 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .choice.on { border-color: var(--accent); }
+
+/* ================== ФОТО БЛАНКА ================== */
+
+.hero-actions { display: grid; gap: 10px; }
+
+@media (min-width: 720px) {
+    .hero-actions { grid-template-columns: 2fr 1fr; }
+}
+
+.photo-cta { margin-bottom: 12px; }
+.file-btn { cursor: pointer; margin: 6px 0 12px; }
+.file-btn .ico, .big .ico { width: 22px; height: 22px; }
+
+.thumbs { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.thumb { margin: 0; width: calc(50% - 5px); max-width: 220px; }
+.thumb img { width: 100%; border-radius: 8px; display: block; }
+.thumb figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.warn-card { border: 1px solid var(--c-inaccuracy); }
+.narrow-p { max-width: 640px; margin: 4px 2px 16px; }
+
+.reading { text-align: center; padding: 32px 16px; }
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    border: 4px solid var(--card-2);
+    border-top-color: var(--accent);
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 3s; }
+}
+
+.recog-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.recog-sum div { background: var(--bg-2); border-radius: 10px; padding: 10px 4px; }
+.recog-sum b { display: block; font-size: 24px; line-height: 1.1; }
+.recog-sum span { font-size: 12px; color: var(--muted); }
+
+/* Состояние прочитанного хода: цвет говорит, нужно ли на него смотреть */
+:root {
+    --st-fixed: #6aa5d8;
+    --st-doubt: var(--c-inaccuracy);
+    --st-pinned: var(--accent);
+    --st-stop: var(--c-blunder);
+}
+
+.st-исправлено, .recog-sum .st-исправлено b { color: var(--st-fixed); }
+.st-сомнение, .recog-sum .st-сомнение b { color: var(--st-doubt); }
+.st-закреплено { color: var(--st-pinned); }
+.st-стоп { color: var(--st-stop); }
+.st-уверенно { color: var(--text); }
+
+.mv-btn.st-исправлено { box-shadow: inset 0 -2px 0 var(--st-fixed); }
+.mv-btn.st-сомнение { box-shadow: inset 0 -2px 0 var(--st-doubt); }
+.mv-btn.st-закреплено { box-shadow: inset 0 -2px 0 var(--st-pinned); }
+.mv-btn.st-стоп { box-shadow: inset 0 0 0 2px var(--st-stop); text-align: center; }
+.mv-btn.on.st-исправлено, .mv-btn.on.st-сомнение, .mv-btn.on.st-закреплено, .mv-btn.on.st-стоп { color: var(--accent-ink); }
+
+.legend { display: flex; gap: 12px; flex-wrap: wrap; margin: -4px 0 8px; }
+.legend span::before { content: "●"; margin-right: 4px; }
+
+.cell-crop {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.cell-crop.placeholder { height: 90px; background: var(--bg-2); }
+
+.reading-chip {
+    display: inline-block;
+    background: var(--card-2);
+    border-radius: 6px;
+    padding: 1px 8px;
+    margin: 2px 4px 2px 0;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.reading-chip.dead { text-decoration: line-through; color: var(--muted); }
+
+.choice-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+
+.key-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.key-line .ico { width: 18px; height: 18px; color: var(--accent); }
+.key-input { font-size: 15px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.fields select { width: 100%; }
+a { color: var(--accent); }

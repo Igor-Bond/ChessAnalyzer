@@ -10,6 +10,8 @@ import { describe, it, equal, assert } from '../runner.js';
 import { app } from '../../js/app.js';
 import { actions } from '../../js/core/actions.js';
 import { хранилище } from '../../js/core/store.js';
+import { распознавание } from '../../js/core/recognize.js';
+import { разобратьОтвет } from '../../js/core/scoresheet.js';
 
 const экран = () => document.getElementById('screen');
 
@@ -175,4 +177,99 @@ describe('Экраны', () => {
         хранилище.стереть();
         app.go('архив');
     });
+
+    it('фото бланка: снимок → чтение → вопрос → ручной ход → партия', async () => {
+        хранилище.стереть();
+        хранилище.настроить({ ключ: 'тестовый-ключ', глубина: 10 });
+
+        // Вместо Google — ответ, сочинённый как настоящий: одна клетка
+        // спорная, одна пустая
+        let отправлено = null;
+        распознавание.задатьИсполнителя(async (снимки) => {
+            отправлено = снимки;
+            return разобратьОтвет({
+                white: 'Igor', black: 'Klaus',
+                moves: [
+                    { n: 1, w: ['e4'], b: ['e6', 'c6'], wBox: [100, 100, 140, 300], bBox: [100, 320, 140, 520] },
+                    { n: 2, w: [], b: ['d5'], wBox: [150, 100, 190, 300] }
+                ]
+            });
+        });
+
+        app.go('архив');
+        await нажать('[data-action="новая-по-фото"]');
+        await дождаться(() => app.route.name === 'фото', 'экран фото');
+        equal(немыеКнопки(), []);
+
+        // Снимок — нарисованный тут же холст: настоящий файл через настоящий input
+        const холст = document.createElement('canvas');
+        холст.width = 600;
+        холст.height = 400;
+        холст.getContext('2d').fillRect(0, 0, 50, 50);
+        const файл = new File([await new Promise((r) => холст.toBlob(r, 'image/png'))], 'бланк.png', { type: 'image/png' });
+
+        const поле = экран().querySelector('input[type="file"]');
+        const dt = new DataTransfer();
+        dt.items.add(файл);
+        поле.files = dt.files;
+        поле.dispatchEvent(new Event('change', { bubbles: true }));
+
+        await дождаться(() => экран().querySelector('[data-action="распознать"]'), 'кнопка чтения после выбора снимка');
+        await нажать('[data-action="распознать"]');
+        await дождаться(() => экран().querySelector('.recog-sum'), 'итог сверки');
+
+        equal(отправлено.length, 1);
+        assert(отправлено[0].data.length > 100 && отправлено[0].mime === 'image/jpeg', 'снимок не уменьшен в JPEG');
+        equal(немыеКнопки(), []);
+
+        // Первый вопрос — спорный ответ чёрных; выбираем c6
+        assert(экран().querySelector('[data-action="выбрать-вариант"][data-san="c6"]'), 'нет варианта c6');
+        await нажать('[data-action="выбрать-вариант"][data-san="c6"]');
+
+        // Дальше — пустая клетка 2. хода белых: вписываем сами
+        await дождаться(() => экран().querySelector('#manual-move'), 'поле ручного хода');
+        assert(экран().querySelector('.mv-btn.st-стоп'), 'место остановки не отмечено');
+        await нажать('.mv-btn.st-стоп');
+        экран().querySelector('#manual-move').value = 'd4';
+        экран().querySelector('#manual-move').closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 0));
+
+        await дождаться(() => /Вся запись сходится/.test(экран().textContent), 'запись сошлась после ручного хода');
+
+        const id = app.route.param;
+        await нажать('[data-action="взять-партию"]');
+        await дождаться(() => app.route.name === 'разбор', 'переход к разбору');
+
+        const п = хранилище.партия(id);
+        equal(п.ходы, ['e4', 'c6', 'd4', 'd5']);
+        equal(п.белые, 'Igor');
+
+        распознавание.задатьИсполнителя(null);
+        app.go('архив');
+    });
+
+    it('фото без ключа: подсказка про настройки, чтение недоступно', async () => {
+        хранилище.стереть();
+        app.go('архив');
+        await нажать('[data-action="новая-по-фото"]');
+        assert(экран().querySelector('.warn-card [data-action="настройки"]'), 'нет подсказки про ключ');
+        app.go('архив');
+    });
+
+    it('настройки: ключ сохраняется и показывается только хвостом', async () => {
+        хранилище.стереть();
+        app.go('настройки');
+        equal(немыеКнопки(), []);
+
+        const форма = экран().querySelector('[data-submit="ключ"]');
+        форма.querySelector('input').value = 'AIzaSyTEST-1234';
+        форма.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 0));
+
+        equal(хранилище.настройки().ключ, 'AIzaSyTEST-1234');
+        assert(экран().textContent.includes('••••••1234'), 'хвост ключа не показан');
+        assert(!экран().textContent.includes('AIzaSyTEST'), 'ключ виден целиком');
+        хранилище.стереть();
+    });
+
 });

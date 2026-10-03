@@ -15,6 +15,7 @@ actions.init();
 // Наборы регистрируют проверки самим фактом импорта
 await import('./suites/notation.test.js');
 await import('./suites/game.test.js');
+await import('./suites/scoresheet.test.js');
 await import('./suites/review.test.js');
 await import('./suites/board.test.js');
 await import('./suites/store.test.js');

@@ -157,6 +157,10 @@ export const вводЭкран = {
                 </div>
 
                 <div class="panel-col">
+                    ${п.ходы.length ? '' : html`
+                        <button class="btn primary big photo-cta" data-action="фото">${raw(иконка('камера'))} Сфотографировать бланк</button>
+                    `}
+
                     <section class="card">
                         <form class="move-form" data-submit="ход" autocomplete="off">
                             <label class="move-label" for="move-input">
@@ -180,6 +184,9 @@ export const вводЭкран = {
                             <button class="btn ghost" data-action="вставка">
                                 ${raw(иконка('вставить'))} Вставить текст
                             </button>
+                            ${п.ходы.length ? html`
+                                <button class="btn ghost" data-action="фото">${raw(иконка('камера'))} Фото бланка</button>
+                            ` : ''}
                         </div>
 
                         ${с.вставка ? html`

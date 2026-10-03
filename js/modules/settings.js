@@ -1,5 +1,5 @@
 /**
- * Настройки: нотация показа и глубина движка.
+ * Настройки: нотация показа, глубина движка, ключ Gemini.
  *
  * Нотация — только для показа. Ввод понимает все три сразу (Р-3), поэтому
  * сменить её можно в любой момент, и ни одна партия архива от этого не
@@ -12,6 +12,8 @@ import { ui } from '../core/ui.js';
 import { иконка } from '../core/icons.js';
 import { хранилище, ГЛУБИНЫ } from '../core/store.js';
 import { НОТАЦИИ, показатьХод } from '../core/notation.js';
+import { ai, МОДЕЛЬ_ПО_УМОЛЧАНИЮ } from '../core/ai.js';
+import { ключИзТрекера } from '../core/trackerkey.js';
 
 const { html, raw } = ui;
 
@@ -20,6 +22,53 @@ const ПОДПИСИ_ГЛУБИНЫ = {
     14: ['Обычно', 'около минуты на партию на телефоне'],
     18: ['Тщательно', 'в несколько раз дольше, точнее в сложных позициях']
 };
+
+/** Что сказать под ключом: итог проверки или взятия из трекера. */
+const с = { сообщение: '', ошибка: '', занято: false };
+
+/** Ключ на экране — только хвост: экран могут видеть через плечо. */
+function замаскировать(ключ) {
+    return ключ ? `••••••${ключ.slice(-4)}` : '';
+}
+
+function разделGemini(н) {
+    const модели = [...new Set([н.модель, ...н.модели].filter(Boolean))];
+
+    return html`
+        <section class="card">
+            <h2 class="card-title">Чтение бланков · Gemini</h2>
+            <p class="muted small">Фото бланка читает модель Google по вашему личному ключу. Ключ хранится только на этом устройстве. Получить его — на <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+
+            ${н.ключ ? html`
+                <p class="key-line">${raw(иконка('ключ'))} Ключ задан: <code>${замаскировать(н.ключ)}</code>
+                    <button class="btn ghost small" data-action="забыть-ключ">Убрать</button></p>
+            ` : ''}
+
+            <form class="move-form" data-submit="ключ" autocomplete="off">
+                <div class="move-row">
+                    <input name="ключ" class="move-input key-input" type="password" placeholder="${н.ключ ? 'Заменить ключ' : 'Вставьте ключ'}" autocomplete="off" spellcheck="false">
+                    <button class="btn primary" type="submit">Сохранить</button>
+                </div>
+            </form>
+
+            <div class="row-actions">
+                <button class="btn ghost" data-action="ключ-из-трекера">Взять из трекера тренировок</button>
+                <button class="btn ghost" data-action="проверить-ключ" ${н.ключ && !с.занято ? '' : 'disabled'}>${с.занято ? 'Проверяю…' : 'Проверить и обновить модели'}</button>
+            </div>
+
+            ${с.сообщение ? html`<p class="form-note">${с.сообщение}</p>` : ''}
+            ${с.ошибка ? html`<p class="form-error">${с.ошибка}</p>` : ''}
+
+            ${модели.length ? html`
+                <label class="fields"><span class="small muted">Модель</span>
+                    <select data-change="модель">
+                        ${модели.map((м) => html`<option value="${м}" ${м === н.модель ? 'selected' : ''}>${м}</option>`)}
+                    </select>
+                </label>
+            ` : html`<p class="muted small">Модель выберется сама при первом чтении (обычно ${МОДЕЛЬ_ПО_УМОЛЧАНИЮ} или новее).</p>`}
+        </section>
+    `;
+}
 
 export const настройкиЭкран = {
 
@@ -33,6 +82,8 @@ export const настройкиЭкран = {
             </header>
 
             <div class="narrow">
+                ${разделGemini(н)}
+
                 <section class="card">
                     <h2 class="card-title">Нотация</h2>
                     <p class="muted small">Как показывать ходы. Вводить можно в любой — приложение поймёт.</p>
@@ -56,10 +107,14 @@ export const настройкиЭкран = {
                             </button>
                         `)}
                     </div>
-                    <p class="muted small">Уже разобранные партии не пересчитываются сами — их можно разобрать заново из экрана разбора.</p>
+                    <p class="muted small">Уже разобранные партии не пересчитываются сами — на экране разбора есть кнопка «Пересчитать».</p>
                 </section>
             </div>
         `;
+    },
+
+    leave() {
+        Object.assign(с, { сообщение: '', ошибка: '', занято: false });
     }
 };
 
@@ -71,4 +126,68 @@ actions.on('нотация', (el) => {
 actions.on('глубина', (el) => {
     хранилище.настроить({ глубина: Number(el.dataset.value) });
     app.render();
+});
+
+/** Новый ключ — заново и модель: прежняя могла быть недоступна новому. */
+function сохранитьКлюч(ключ) {
+    хранилище.настроить({ ключ, модель: '', модели: [] });
+}
+
+actions.onSubmit('ключ', (форма) => {
+    const ключ = форма.querySelector('input[name="ключ"]').value.trim();
+    if (!ключ) return;
+
+    сохранитьКлюч(ключ);
+    с.сообщение = 'Ключ сохранён. Нажмите «Проверить», чтобы убедиться, что Google его принимает.';
+    с.ошибка = '';
+    app.render();
+});
+
+actions.on('ключ-из-трекера', async () => {
+    const ключ = await ключИзТрекера();
+
+    if (!ключ) {
+        с.сообщение = '';
+        с.ошибка = 'В трекере тренировок на этом устройстве ключа нет. Откройте трекер в этом же браузере или впишите ключ вручную.';
+    } else {
+        сохранитьКлюч(ключ);
+        с.ошибка = '';
+        с.сообщение = `Ключ взят из трекера: ${замаскировать(ключ)}. Если он ограничен адресом трекера, добавьте в консоли Google igor-bond.github.io/ChessAnalyzer/*.`;
+    }
+
+    app.render();
+});
+
+actions.on('забыть-ключ', () => {
+    сохранитьКлюч('');
+    с.сообщение = 'Ключ убран с этого устройства.';
+    с.ошибка = '';
+    app.render();
+});
+
+actions.on('проверить-ключ', async () => {
+    const { ключ, модель } = хранилище.настройки();
+    if (!ключ || с.занято) return;
+
+    с.занято = true;
+    с.ошибка = '';
+    с.сообщение = '';
+    app.render();
+
+    try {
+        const список = await ai.модели(ключ);
+        const выбрана = список.includes(модель) ? модель : ai.выбрать(список);
+        хранилище.настроить({ модели: список, модель: выбрана || '' });
+        с.сообщение = `Ключ работает. Моделей доступно: ${список.length}, выбрана ${выбрана}.`;
+    } catch (e) {
+        с.ошибка = e.message || String(e);
+    } finally {
+        с.занято = false;
+    }
+
+    if (app.route.name === 'настройки') app.render();
+});
+
+actions.onChange('модель', (el) => {
+    хранилище.настроить({ модель: el.value });
 });

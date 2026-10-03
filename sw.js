@@ -14,7 +14,7 @@
  * установленных приложений останется старый кэш.
  */
 
-const APP_VERSION = 'v1';
+const APP_VERSION = 'v2';
 const CACHE_NAME = `chess-${APP_VERSION}`;
 
 const СРОК_СЕТИ = 3000;
@@ -48,6 +48,7 @@ const ФАЙЛЫ = [
     'js/version.js',
 
     'js/core/actions.js',
+    'js/core/ai.js',
     'js/core/analyze.js',
     'js/core/board.js',
     'js/core/chess.js',
@@ -56,13 +57,18 @@ const ФАЙЛЫ = [
     'js/core/game.js',
     'js/core/icons.js',
     'js/core/notation.js',
+    'js/core/photo.js',
+    'js/core/recognize.js',
     'js/core/report.js',
     'js/core/review.js',
+    'js/core/scoresheet.js',
     'js/core/store.js',
+    'js/core/trackerkey.js',
     'js/core/ui.js',
 
     'js/modules/entry.js',
     'js/modules/home.js',
+    'js/modules/photo.js',
     'js/modules/review.js',
     'js/modules/settings.js',
 
