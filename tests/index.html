@@ -84,6 +84,13 @@
     после загрузки уже поздно — модули к тому времени запрошены. Поэтому
     сначала снимаем, и если он этой загрузкой ещё управлял, перезагружаемся
     один раз. Отсюда же динамический импорт вместо статического тега.
+
+    Снимается только своё: воркер, чья область лежит внутри шахмат, и кэши
+    chess-*. Страница живёт и на Pages, а там у источника igor-bond.github.io,
+    кроме шахмат, трекер тренировок, «Ноты» и wortschatz, — и воркеры, и
+    кэши браузер ведёт по источнику, не по каталогу. Снятое подчистую
+    оставляло соседей без офлайна: свой кэш шахматы докачают сами (Р-18), а
+    соседям снятый воркер его уже не отдаст (Р-20).
 -->
 <script>
     globalThis.__CHESS_KEY__ = 'chess.test';
@@ -91,12 +98,20 @@
     (async () => {
         const управлял = !!navigator.serviceWorker?.controller;
 
+        // Корень шахмат — каталог над страницей проверок. Косая черта на
+        // конце обязательна: без неё «/ChessAnalyzer» захватил бы и соседа с
+        // тем же началом имени, вроде «/ChessAnalyzer-old/»
+        const корень = new URL('../', location.href).href;
+
         try {
             for (const reg of await navigator.serviceWorker?.getRegistrations?.() || []) {
-                await reg.unregister();
+                if (reg.scope.startsWith(корень)) await reg.unregister();
             }
 
-            for (const name of await caches?.keys?.() || []) await caches.delete(name);
+            // Тот же префикс, по которому sw.js убирает свои прежние версии
+            for (const name of await caches?.keys?.() || []) {
+                if (name.startsWith('chess-')) await caches.delete(name);
+            }
         } catch {
             // Ни воркера, ни хранилища кэшей может не быть вовсе — тогда и
             // снимать нечего, а проверкам это безразлично
