@@ -247,6 +247,11 @@ describe('Экраны', () => {
         await дождаться(() => app.route.name === 'фото', 'экран фото');
         equal(немыеКнопки(), []);
 
+        // Камера и галерея — разные поля: одно поле с multiple Android
+        // открывает без камеры (Р-27)
+        assert(экран().querySelector('input[type="file"][capture="environment"]:not([multiple])'), 'нет поля камеры');
+        assert(экран().querySelector('input[type="file"][multiple]:not([capture])'), 'нет поля галереи');
+
         // Снимок — нарисованный тут же холст: настоящий файл через настоящий input
         const холст = document.createElement('canvas');
         холст.width = 600;

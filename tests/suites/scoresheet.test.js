@@ -182,3 +182,72 @@ describe('Ответ Gemini', () => {
         equal(ai.выбрать([]), null);
     });
 });
+
+/**
+ * Поддельный Google: отвечает по очереди из списка — кодом и телом.
+ * Подменяет fetch только на время проверки.
+ */
+async function сПоддельнымGoogle(ответы, работа) {
+    const настоящий = globalThis.fetch;
+    const запросы = [];
+    let i = 0;
+
+    globalThis.fetch = async (url, параметры) => {
+        запросы.push(String(url));
+        const [код, тело] = ответы[Math.min(i++, ответы.length - 1)];
+        return new Response(JSON.stringify(тело), { status: код, headers: { 'Content-Type': 'application/json' } });
+    };
+
+    try {
+        return { итог: await работа(), запросы };
+    } finally {
+        globalThis.fetch = настоящий;
+    }
+}
+
+const ПЕРЕГРУЖЕНА = [503, { error: { code: 503, message: 'The model is overloaded. Please try again later.', status: 'UNAVAILABLE' } }];
+const ГОТОВО = [200, { candidates: [{ content: { parts: [{ text: '{"moves": []}' }] }, finishReason: 'STOP' }] }];
+
+describe('Google перегружен', () => {
+    it('перегрузка — повтор с паузой, а не ошибка человеку', async () => {
+        const состояния = [];
+        const { итог, запросы } = await сПоддельнымGoogle([ПЕРЕГРУЖЕНА, ПЕРЕГРУЖЕНА, ГОТОВО], () => ai.спроситьJSON({
+            ключ: 'к', модели: ['gemini-3.5-flash'], текст: 'x', паузы: [0, 0, 0], наСостояние: (с) => состояния.push(с)
+        }));
+
+        equal(итог, { moves: [] });
+        equal(запросы.length, 3);
+        assert(состояния.some((с) => /перегружен/i.test(с)), `не сказано, что ждём: ${JSON.stringify(состояния)}`);
+    });
+
+    it('модель перегружена насовсем — переход на запасную', async () => {
+        const { итог, запросы } = await сПоддельнымGoogle([ПЕРЕГРУЖЕНА, ПЕРЕГРУЖЕНА, ПЕРЕГРУЖЕНА, ГОТОВО], () => ai.спроситьJSON({
+            ключ: 'к', модели: ['gemini-3.5-flash', 'gemini-2.5-flash'], текст: 'x', паузы: [0, 0, 0]
+        }));
+
+        equal(итог, { moves: [] });
+        assert(запросы.at(-1).includes('gemini-2.5-flash'), 'запасная модель не спрошена');
+    });
+
+    it('все перегружены — понятный отказ со списком испробованного', async () => {
+        let текст = '';
+        await сПоддельнымGoogle([ПЕРЕГРУЖЕНА], async () => {
+            try {
+                await ai.спроситьJSON({ ключ: 'к', модели: ['a-flash', 'b-flash'], текст: 'x', паузы: [0, 0, 0] });
+            } catch (e) { текст = e.message; }
+        });
+        assert(/перегружен/i.test(текст) && /a-flash/.test(текст) && /b-flash/.test(текст), текст);
+    });
+
+    it('неверный ключ не повторяется и запасные не перебираются', async () => {
+        const { запросы } = await сПоддельнымGoogle([[400, { error: { message: 'API key not valid. Please pass a valid API key.' } }]], async () => {
+            try { await ai.спроситьJSON({ ключ: 'к', модели: ['a-flash', 'b-flash'], текст: 'x', паузы: [0, 0, 0] }); } catch { /* ждём */ }
+        });
+        equal(запросы.length, 1);
+    });
+
+    it('запасные модели: сначала flash, потом pro, без лёгких и служебных', () => {
+        equal(ai.запасные(['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-2.5-flash-image', 'gemini-2.0-flash'], 'gemini-3.5-flash'),
+            ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro']);
+    });
+});

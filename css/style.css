@@ -762,3 +762,9 @@ a { color: var(--accent); }
 /* ================== УСТАНОВКА ================== */
 
 .install-btn { margin-top: 10px; }
+
+.pick-row { display: grid; gap: 8px; margin-top: 8px; }
+
+@media (min-width: 560px) {
+    .pick-row { grid-template-columns: 1fr 1fr; }
+}
