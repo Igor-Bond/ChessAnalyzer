@@ -18,6 +18,7 @@ import { когдаСловами } from './settings.js';
 import { VERSION } from '../version.js';
 import { ФИГУРЫ } from '../core/board.js';
 import { НАЧАЛО } from '../core/playout.js';
+import { задачник } from '../core/puzzles.js';
 
 const { html } = ui;
 
@@ -111,7 +112,10 @@ export const архивЭкран = {
                     <button class="btn primary big" data-action="новая-по-фото">${ui.raw(иконка('камера'))} Сфотографировать бланк</button>
                     <button class="btn big" data-action="новая">+ Ввести ходы</button>
                 </div>
-                <button class="btn ghost free-btn" data-action="свободная-доска">${ui.raw(иконка('играть'))} Свободная доска: доиграть, расставить позицию</button>
+                <div class="tool-row">
+                    <button class="btn ghost" data-action="свободная-доска">${ui.raw(иконка('играть'))} Свободная доска</button>
+                    <button class="btn ghost" data-action="задачи">${ui.raw(иконка('цель'))} Задачи · ${задачник.состояние().рейтинг}</button>
+                </div>
                 <p class="hint">Снимите бланк или введите ходы — движок разберёт каждый ход.</p>
                 ${строкаОбмена()}
                 ${строкаУстановки()}

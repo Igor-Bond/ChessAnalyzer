@@ -844,7 +844,6 @@ a { color: var(--accent); }
 
 /* ================== СВОБОДНАЯ ДОСКА ================== */
 
-.free-btn { width: 100%; margin-top: 8px; }
 .playout-btn { width: calc(100% - 28px); margin: 8px 0 0 28px; }
 
 .free-moves { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -878,3 +877,26 @@ a { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
     .progress-bar.indeterminate { animation-duration: 4s; }
 }
+
+/* ================== ЗАДАЧИ ================== */
+
+.tool-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.tool-row .btn { min-width: 0; padding-left: 8px; padding-right: 8px; }
+
+.level-head { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; }
+.level-num { text-align: center; background: var(--bg-2); border-radius: 10px; padding: 8px 14px; flex: none; }
+.level-num b { display: block; font-size: 30px; line-height: 1.1; }
+.level-num span { font-size: 11px; color: var(--muted); }
+.level-rank { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.level-rank b { font-size: 17px; }
+
+.rgraph { display: block; width: 100%; height: 70px; background: var(--bg-2); border-radius: 6px; margin-bottom: 8px; }
+.rgraph polyline { fill: none; stroke: var(--accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+
+.puzzle-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.puzzle-msg { font-weight: 650; margin: 10px 0; }
+.puzzle-msg.ok, .delta.ok { color: var(--accent); }
+.puzzle-msg.bad, .delta.bad { color: var(--danger); }
+.puzzle-card .free-moves { margin: 8px 0; }
+.puzzle-card .var-mv:disabled { cursor: default; opacity: 1; }
+.puzzle-card .fields, .card > .fields { display: grid; gap: 4px; margin: 6px 0 12px; }

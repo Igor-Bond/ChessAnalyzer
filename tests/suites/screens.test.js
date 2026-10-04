@@ -15,6 +15,10 @@ import { разобратьОтвет } from '../../js/core/scoresheet.js';
 import { новаяПартия } from '../../js/core/game.js';
 import { синхронизация } from '../../js/core/autosync.js';
 import { установка } from '../../js/core/install.js';
+import { задачник, изLichess } from '../../js/core/puzzles.js';
+import { сброситьЗадачи } from '../../js/modules/puzzles.js';
+import { Chess } from '../../js/core/chess.js';
+import { МАТ_В_ДВА, МАТ_В_ОДИН, поддельнаяЗагрузка, партияСРазбором } from './puzzles.test.js';
 
 const экран = () => document.getElementById('screen');
 
@@ -658,6 +662,113 @@ describe('Свободная доска', () => {
         assert(экран().querySelector('[data-action="расставить-позицию"]'), 'нет «Расставить позицию» на вводе');
 
         app.go('архив');
+        хранилище.стереть();
+    });
+});
+
+describe('Задачи', () => {
+    const клик = async (from, to) => {
+        await нажать(`[data-square="${from}"]`);
+        await нажать(`[data-square="${to}"]`);
+    };
+
+    it('lichess: ошибка, ещё раз, ответ соперника, мат — и рейтинг', async () => {
+        хранилище.стереть();
+        задачник.стереть();
+        сброситьЗадачи();
+        const загрузка = поддельнаяЗагрузка([МАТ_В_ДВА, МАТ_В_ОДИН]);
+        задачник.задатьЗагрузку(загрузка);
+
+        app.go('архив');
+        assert(/1500/.test(экран().querySelector('[data-action="задачи"]').textContent), 'на кнопке задач нет рейтинга');
+        await нажать('[data-action="задачи"]');
+        await дождаться(() => app.route.name === 'задачи', 'меню задач');
+        equal(немыеКнопки(), []);
+
+        await нажать('[data-action="задачи-решать"][data-source="lichess"]');
+        await дождаться(() => экран().querySelector('.puzzle-card'), 'задача на экране');
+        equal(немыеКнопки(), []);
+        assert(загрузка.адреса[0].includes('difficulty=normal'), загрузка.адреса[0]);
+        assert(/Ход белых/.test(экран().textContent), 'не сказано, чей ход');
+
+        // Неверный ход — любой не из решения и не матующий
+        const з = изLichess(МАТ_В_ДВА);
+        const неверный = new Chess(з.fen).moves({ verbose: true })
+            .find((м) => м.from + м.to !== 'g3g6' && !м.promotion && !м.san.includes('#'));
+        await клик(неверный.from, неверный.to);
+        assert(экран().querySelector('.puzzle-msg.bad'), 'нет сообщения о неверном ходе');
+        const послеОшибки = задачник.состояние().рейтинг;
+        assert(послеОшибки < 1500, 'неудача не засчитана в рейтинг');
+
+        await нажать('[data-action="задача-ещё"]');
+        await клик('g3', 'g6');
+        await дождаться(() => /Продолжайте/.test(экран().textContent), 'ответ соперника', 3000);
+        await клик('g6', 'g7');
+        assert(/Решено/.test(экран().querySelector('.puzzle-msg').textContent), 'мат не засчитан решением');
+        equal(задачник.состояние().рейтинг, послеОшибки, 'вторая попытка подняла рейтинг');
+        equal(немыеКнопки(), []);
+
+        // Следующая — мат в один, чисто: рейтинг растёт
+        await нажать('[data-action="задача-следующая"]');
+        await дождаться(() => экран().querySelector('.puzzle-card') && /800/.test(экран().querySelector('.puzzle-head').textContent), 'вторая задача');
+        await клик('h5', 'f7');
+        assert(/Решено/.test(экран().textContent), 'мат в один не решён');
+        assert(задачник.состояние().рейтинг > послеОшибки, 'чистое решение не подняло рейтинг');
+        equal(задачник.состояние().серия, 1);
+        assert(экран().querySelector('a[href$="/training/tst01"]'), 'нет ссылки на lichess');
+    });
+
+    it('lichess без сети и без запаса — объяснение и «Попробовать снова»', async () => {
+        задачник.задатьЗагрузку(async () => { throw new TypeError('Failed to fetch'); });
+        await нажать('[data-action="задача-следующая"]');
+        await дождаться(() => экран().querySelector('.empty-note'), 'сообщение без сети');
+        assert(/Нет связи с lichess/.test(экран().textContent), экран().textContent);
+        assert(экран().querySelector('[data-action="задача-следующая"]'), 'нет «Попробовать снова»');
+        equal(немыеКнопки(), []);
+    });
+
+    it('свои ошибки: ход из партии, плохой ход — движок отвергает, лучший — решено', async () => {
+        хранилище.стереть();
+        хранилище.настроить({ глубина: 10 });
+        задачник.стереть();
+        сброситьЗадачи();
+        const п = хранилище.сохранить(партияСРазбором());
+
+        app.go('задачи');
+        assert(/Задач из ваших партий: 1/.test(экран().textContent), экран().textContent);
+        await нажать('[data-action="задачи-решать"][data-source="свои"]');
+        await дождаться(() => экран().querySelector('.puzzle-card'), 'своя задача');
+        assert(/Ход чёрных/.test(экран().textContent));
+        assert(/Sf6/.test(экран().querySelector('.puzzle-card').textContent), 'не сказано, что было сыграно');
+
+        await клик('g8', 'f6');
+        assert(/сыгран в партии/.test(экран().querySelector('.puzzle-msg').textContent), 'ход из партии не узнан');
+        await нажать('[data-action="задача-ещё"]');
+
+        // a6 пропускает мат: движок обязан отвергнуть
+        await клик('a7', 'a6');
+        await дождаться(() => экран().querySelector('.puzzle-msg.bad'), 'вердикт движка', 30000);
+        assert(/теряет/.test(экран().querySelector('.puzzle-msg').textContent), экран().querySelector('.puzzle-msg').textContent);
+
+        await нажать('[data-action="задача-ещё"]');
+        await клик('g7', 'g6');
+        assert(/Решено/.test(экран().textContent), 'лучший ход не засчитан');
+        assert(/Лучше было/.test(экран().textContent), 'нет лучшей линии');
+        equal(задачник.состояние().свои[`${п.id}:6`].ящик, 0, 'после ошибки задача должна вернуться скоро');
+        equal(немыеКнопки(), []);
+
+        await нажать('[data-action="задача-в-разбор"]');
+        await дождаться(() => app.route.name === 'разбор', 'разбор');
+        assert(экран().querySelector('.mv-btn.on[data-ply="6"]'), 'разбор открыт не на 3…Sf6');
+
+        // Задача решена и ушла на повтор — очередь пуста
+        app.go('задачи', 'свои');
+        await дождаться(() => экран().querySelector('.empty-note'), 'пустая очередь');
+        assert(/вернётся через/.test(экран().textContent), экран().textContent);
+
+        app.go('архив');
+        задачник.задатьЗагрузку((...а) => fetch(...а));
+        задачник.стереть();
         хранилище.стереть();
     });
 });
