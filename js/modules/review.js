@@ -21,6 +21,7 @@ import { разобратьПартию, разборПолон, разборП�
 import { собратьРазбор } from '../core/report.js';
 import { КЛАССЫ, СТАДИИ, шансыБелых, показатьОценку } from '../core/review.js';
 import { подсказка, линияВSan } from '../core/explain.js';
+import { открытьПравку } from './entry.js';
 
 const { html, raw } = ui;
 
@@ -267,6 +268,7 @@ function карточкаХода(п, р, нотация) {
                 </div>
             </div>
             <p class="move-text">${п_.текст}</p>
+            <button class="btn ghost small fix-move" data-action="исправить-ход">${raw(иконка('править'))} Исправить ход</button>
 
             ${показатьЛучший ? html`
                 <div class="line-box">
@@ -618,3 +620,10 @@ actions.on('выйти-из-варианта', () => {
     app.render();
 });
 
+
+// Ход записан неверно — сразу к его правке на экране ввода (Р-29)
+actions.on('исправить-ход', () => {
+    if (!с.id || !с.полуход) return;
+    открытьПравку(с.id, с.полуход);
+    app.go('ввод', с.id);
+});

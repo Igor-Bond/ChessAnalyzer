@@ -776,3 +776,21 @@ a { color: var(--accent); }
 .player-input, .fields input, .fields select, .paste-text, .key-input { font-size: 16px; }
 
 .storage-warn { margin-top: 10px; }
+
+/* ================== ПРАВКА ХОДА ================== */
+
+.mv-edit {
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin: -2px 0;
+    text-align: left;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mv-edit:hover { background: var(--card-2); }
+.mv-edit.on { background: var(--accent); color: var(--accent-ink); }
+.edit-card { border: 1px solid var(--accent); }
+.fix-move { margin: -4px 0 6px; }
