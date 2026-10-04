@@ -56,7 +56,7 @@ export const app = {
             const маршрут = разобрать(location.hash);
             if (маршрут.name === app.route.name && маршрут.param === app.route.param) return;
 
-            app.уйти();
+            app.уйти(маршрут);
             app.route = маршрут;
             app.render();
         });
@@ -71,30 +71,47 @@ export const app = {
             ? `#/${encodeURIComponent(имя)}/${encodeURIComponent(параметр)}`
             : `#/${encodeURIComponent(имя)}`;
 
-        app.уйти();
-        app.route = разобрать(адрес);
+        const куда = разобрать(адрес);
+        app.уйти(куда);
+        app.route = куда;
         app.render(true);
 
         if (location.hash !== адрес) location.hash = адрес;
     },
 
-    /** Экран, который покидают, может прибрать за собой: остановить разбор. */
-    уйти() {
-        экраны()[app.route.name]?.leave?.();
+    /**
+     * Экран, который покидают, может прибрать за собой: остановить разбор,
+     * убрать брошенную пустую партию. Он знает, куда уходят: с фото бланка
+     * на ввод той же партии — не бросили, а продолжают.
+     */
+    уйти(куда = null) {
+        экраны()[app.route.name]?.leave?.(куда);
     },
 
     /**
      * Перерисовать текущий экран.
      *
-     * @param {boolean} наверх — прокрутить к началу. Только при переходе:
-     *   перерисовка от хода посреди разбора не должна уносить страницу
-     *   вверх от списка ходов, который человек читает.
+     * @param {boolean|{наверх?: boolean, фон?: boolean}} параметры
+     *   наверх — прокрутить к началу. Только при переходе: перерисовка от
+     *   хода посреди разбора не должна уносить страницу вверх.
+     *   фон — перерисовка не по действию человека (догрузилась вырезка,
+     *   пришли партии с другого устройства, шаг разбора): набираемый текст и
+     *   курсор в поле сохраняются. Раньше такая перерисовка стирала
+     *   набранное посреди слова и закрывала клавиатуру телефона.
      */
-    render(наверх = false) {
+    render(параметры = false) {
+        const { наверх = false, фон = false } = typeof параметры === 'object' ? параметры : { наверх: параметры };
+
         const место = document.getElementById('screen');
         if (!место) return;
 
         const экран = экраны()[app.route.name] || архивЭкран;
+
+        // Поле, в котором человек сейчас набирает, — запомнить до перерисовки
+        const поле = фон && document.activeElement?.id && место.contains(document.activeElement)
+            && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)
+            ? { id: document.activeElement.id, значение: document.activeElement.value, начало: document.activeElement.selectionStart, конец: document.activeElement.selectionEnd }
+            : null;
 
         try {
             место.innerHTML = String(экран.render(app.route.param));
@@ -102,6 +119,15 @@ export const app = {
         } catch (e) {
             console.error('[Экран] Не удалось нарисовать:', e);
             место.innerHTML = '<div class="empty-note">Экран не открылся. Попробуйте обновить страницу.</div>';
+        }
+
+        if (поле) {
+            const новое = document.getElementById(поле.id);
+            if (новое) {
+                новое.value = поле.значение;
+                новое.focus();
+                try { новое.setSelectionRange(поле.начало, поле.конец); } catch { /* не у всех полей есть курсор */ }
+            }
         }
 
         экран.after?.(app.route.param);

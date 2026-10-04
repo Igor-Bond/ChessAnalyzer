@@ -22,6 +22,7 @@ import { распознавание } from '../core/recognize.js';
 import { сверить, сомнительные } from '../core/scoresheet.js';
 import { ai } from '../core/ai.js';
 import { склонение } from './home.js';
+import { убратьПустую } from './entry.js';
 
 const { html, raw } = ui;
 
@@ -76,7 +77,7 @@ function подгрузитьВырезку(полуход) {
 
     вырезать(снимок, п?.рамка).then((адрес) => {
         с.вырезки.set(полуход, адрес || '');
-        if (app.route.name === 'фото' && с.выбран === полуход) app.render();
+        if (app.route.name === 'фото' && с.выбран === полуход) app.render({ фон: true });
     }).catch(() => с.вырезки.set(полуход, ''));
 }
 
@@ -342,6 +343,11 @@ export const фотоЭкран = {
 
     after() {
         if (с.этап === 'сверка') подгрузитьВырезку(с.выбран);
+    },
+
+    // Ушли с фото, не взяв партию и не на её ввод, — пустую не оставляем
+    leave(куда) {
+        if (с.этап !== 'чтение') убратьПустую(с.id, куда);
     }
 };
 
@@ -385,7 +391,7 @@ actions.on('распознать', async () => {
 
     // Секунды на экране ожидания: без них минута выглядит зависанием
     const часы = setInterval(() => {
-        if (app.route.name === 'фото' && с.этап === 'чтение') app.render();
+        if (app.route.name === 'фото' && с.этап === 'чтение') app.render({ фон: true });
     }, 1000);
 
     try {
@@ -395,7 +401,7 @@ actions.on('распознать', async () => {
             наСостояние: (текст) => {
                 if (с.id !== id) return;
                 с.состояниеЧтения = текст;
-                if (app.route.name === 'фото') app.render();
+                if (app.route.name === 'фото') app.render({ фон: true });
             }
         });
         if (с.id !== id) return;
@@ -463,7 +469,11 @@ actions.onSubmit('ручной-ход', (форма) => {
     const найдено = найтиХод(доскаДо(с.выбран), текст);
     if (!найдено.ход) {
         с.ошибкаВвода = найдено.ошибка;
-        return app.render();
+        app.render();
+        // Набранное не стираем: ошибку исправляют, а не набирают заново
+        const поле = document.getElementById('manual-move');
+        if (поле) поле.value = текст;
+        return;
     }
 
     закрепить(с.выбран, найдено.ход.san);

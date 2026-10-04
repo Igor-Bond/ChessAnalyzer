@@ -40,6 +40,7 @@ const СРОК = 30000;
 let sdk = null;
 let поднято = null;
 let пользователь = null;
+let ошибкаВхода = '';
 const слушатели = new Set();
 
 function известить() {
@@ -81,7 +82,11 @@ function поднять() {
             .catch((e) => console.warn('[Облако] Постоянная сессия не включилась:', e));
 
         // Возврат после входа переходом по адресу (если окно входа не открылось)
-        await authModule.getRedirectResult(auth).catch(() => {});
+        // Ошибка возврата не глотается: вход переходом может не завершиться
+        // (разделённое хранилище браузера), и человек должен увидеть почему
+        await authModule.getRedirectResult(auth).catch((e) => {
+            ошибкаВхода = e?.code || e?.message || String(e);
+        });
 
         await new Promise((готово) => {
             const стоп = authModule.onAuthStateChanged(auth, (п) => {
@@ -138,6 +143,11 @@ export const облако = {
         }
     },
 
+    /** Чем кончился вход переходом по адресу, если не удался. */
+    get ошибкаВхода() {
+        return ошибкаВхода;
+    },
+
     наВход(функция) {
         слушатели.add(функция);
         return () => слушатели.delete(функция);
@@ -178,7 +188,10 @@ export const облако = {
                     ? fs.query(раздел, fs.where('syncedAt', '>', fs.Timestamp.fromMillis(курсор)))
                     : fs.query(раздел);
 
-                const снимок = await сроком(fs.getDocs(запрос), 'сервер');
+                // Именно с сервера: без сети getDocs молча отдаёт кэш — пустой, —
+                // «приём» удаётся, не дойдя до сервера, и следом идёт отправка,
+                // способная затереть более новую чужую правку
+                const снимок = await сроком(fs.getDocsFromServer(запрос), 'сервер');
                 let новый = курсор;
 
                 const записи = снимок.docs.map((д) => {
