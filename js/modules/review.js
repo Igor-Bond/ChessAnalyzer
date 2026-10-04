@@ -141,7 +141,7 @@ async function запуститьРазбор(п) {
 
 // ================== ЧАСТИ ЭКРАНА ==================
 
-function шкала(оценка) {
+export function шкала(оценка, сверхуБелые = с.сторона === 'b') {
     const белых = оценка ? шансыБелых(оценка) : 50;
     const текст = оценка ? показатьОценку(оценка) : '';
 
@@ -150,7 +150,6 @@ function шкала(оценка) {
     const кратко = !оценка ? ''
         : оценка.мат !== undefined && оценка.мат !== null ? (оценка.мат ? `M${Math.abs(оценка.мат)}` : '#')
         : (Math.abs(оценка.cp || 0) / 100).toFixed(1);
-    const сверхуБелые = с.сторона === 'b';
 
     return html`
         <div class="evalbar ${сверхуБелые ? 'flipped' : ''}" aria-label="Оценка ${текст}">
@@ -462,6 +461,7 @@ export const разборЭкран = {
         }
 
         const доскаДляШаха = new Chess(fen);
+        с.позиция = fen;
 
         const верх = с.сторона === 'w' ? 'b' : 'w';
         const низ = с.сторона;
@@ -495,6 +495,7 @@ export const разборЭкран = {
                         <button class="nav-btn" data-action="вперёд" data-key="arrowright" aria-label="Ход вперёд">${raw(иконка('вправо'))}</button>
                         <button class="nav-btn" data-action="в-конец" data-key="end arrowdown" aria-label="В конец">${raw(иконка('конец'))}</button>
                     </nav>
+                    <button class="btn ghost playout-btn" data-action="доиграть-отсюда">${raw(иконка('играть'))} Доиграть движком отсюда</button>
                 </div>
 
                 <div class="panel-col">
@@ -646,4 +647,9 @@ actions.on('исправить-ход', () => {
 
 actions.on('детально', () => {
     if (с.id) app.go('детально', с.id);
+});
+
+// Свободная доска с позиции, которая сейчас на доске разбора (Р-31)
+actions.on('доиграть-отсюда', () => {
+    if (с.позиция) app.go('доска', с.позиция);
 });

@@ -18,6 +18,7 @@ await import('./suites/game.test.js');
 await import('./suites/scoresheet.test.js');
 await import('./suites/review.test.js');
 await import('./suites/details.test.js');
+await import('./suites/playout.test.js');
 await import('./suites/board.test.js');
 await import('./suites/store.test.js');
 await import('./suites/sync.test.js');
