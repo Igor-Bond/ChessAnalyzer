@@ -568,3 +568,31 @@ describe('Правка записанных ходов', () => {
         хранилище.стереть();
     });
 });
+
+describe('Детально', () => {
+    it('открывается из сводки, переключает игроков, ведёт к ходу в разборе', async () => {
+        хранилище.стереть();
+        хранилище.настроить({ глубина: 10 });
+        const п = хранилище.сохранить({ ...новаяПартия(), белые: 'Igor', чёрные: 'Klaus', ходы: ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#'] });
+        app.go('разбор', п.id);
+        await дождаться(() => хранилище.партия(п.id).разбор?.оценки?.length === 8 && !экран().querySelector('.progress-card'), 'разбор', 30000);
+
+        await нажать('[data-action="детально"]');
+        await дождаться(() => app.route.name === 'детально', 'экран «Детально»');
+        equal(немыеКнопки(), []);
+        assert(экран().querySelector('.dgraph .dbar'), 'нет графика точности по ходам');
+
+        await нажать('[data-action="детально-сторона"][data-side="b"]');
+        assert(экран().querySelector('.side-tab.on').textContent.includes('Klaus'), 'не переключилось на чёрных');
+        assert(/Sf6/.test(экран().textContent), 'зевок Sf6 не в списке ошибок чёрных');
+
+        // Нажатие на ошибку — разбор на этом ходе
+        const ошибка = [...экран().querySelectorAll('.key-item')].find((el) => /Sf6/.test(el.textContent));
+        ошибка.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await дождаться(() => app.route.name === 'разбор', 'переход к разбору');
+        assert(экран().querySelector('.mv-btn.on[data-ply="6"]'), 'разбор открыт не на ходе 3…Sf6');
+
+        app.go('архив');
+        хранилище.стереть();
+    });
+});
